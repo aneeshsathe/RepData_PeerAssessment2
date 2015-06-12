@@ -1,0 +1,48 @@
+---
+title: 'Reproducible Research: Peer Assessment 2'
+author: "Aneesh Sathe"
+date: "June 12, 2015"
+output: html_document
+---
+
+#Synopsis:
+at most 10 complete sentences
+
+#Data Processing
+
+```{r Read Data, cache=TRUE}
+library(data.table)
+in_dat=data.table(read.table("repdata-data-StormData.csv.bz2",sep = ",",header = TRUE))
+
+```
+
+```{r}
+in_dat$BGN_DATE=as.Date(in_dat$BGN_DATE)
+```
+
+Your data analysis must address the following questions:
+
+Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+Across the United States, which types of events have the greatest economic consequences?
+
+#Results
+
+
+at least one figure containing a plot
+
+no more than three figures
+
+Publishing Your Analysis
+
+For this assignment you will need to publish your analysis on RPubs.com. If you do not already have an account, then you will have to create a new account. After you have completed writing your analysis in RStudio, you can publish it to RPubs by doing the following:
+
+In RStudio, make sure your R Markdown document (.Rmd) document is loaded in the editor
+
+Click the Knit HTML button in the doc toolbar to preview your document.
+
+In the preview window, click the Publish button.
+
+Once your document is published to RPubs, you should get a unique URL to that document. Make a note of this URL as you will need it to submit your assignment.
+
+NOTE: If you are having trouble connecting with RPubs due to proxy-related or other issues, you can upload your final analysis document file as a PDF to Coursera instead.

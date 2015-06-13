@@ -1,48 +1,113 @@
 ---
-title: 'Reproducible Research: Peer Assessment 2'
+title: 'Tornadoes Hurt, Water Costs'
 author: "Aneesh Sathe"
 date: "June 12, 2015"
 output: html_document
 ---
 
 #Synopsis:
-at most 10 complete sentences
+Preventing fatalities, injuries and economic costs during severe weather is an important concern. Understanding the extent and type of damage any weather event causes would allow for appropriate planning and budgeting for such events. This analysis shows that Tornadoes cause the most fatalities. Economically, floods cause the most property damage, while drought severly affects crops. The weather event data used for analysis was sourced from the  U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database and is available here: [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2)
 
 #Data Processing
 
-```{r Read Data, cache=TRUE}
+The following libraries are used in the analysis and generation of plots
+```{r Load Library}
 library(data.table)
+library(ggplot2)
+library(gridExtra)
+```
+
+
+The data is read directly from the ZIP file. 
+
+```{r Read Data, cache=TRUE}
+
 in_dat=data.table(read.table("repdata-data-StormData.csv.bz2",sep = ",",header = TRUE))
 
 ```
 
-```{r}
-in_dat$BGN_DATE=as.Date(in_dat$BGN_DATE)
+To access the relevant data we make a new data variable with just the required columns.
+
+```{r,cache=TRUE, echo=TRUE, results='hide'}
+pro_s_dat=in_dat[,c(8,23:28),with = FALSE]
+
+
 ```
 
-Your data analysis must address the following questions:
+The PROPDMGEXP and CROPDMGEXP columns represent the multiplicative factor for costs. Some of the data is missing or has letters representing hundreds, thousands, million billion etc. These are replaced with appropriate numbers for multiplication later. 
 
-Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+```{r,cache=TRUE,echo=TRUE, results='hide'}
+pro_s_dat[,PROPDMGEXP:= as.character(PROPDMGEXP)][PROPDMGEXP == "-"|PROPDMGEXP == ""|PROPDMGEXP == "?"|PROPDMGEXP == "+", PROPDMGEXP := "0"]
+pro_s_dat[,PROPDMGEXP:= as.character(PROPDMGEXP)][PROPDMGEXP == "h"|PROPDMGEXP == "H", PROPDMGEXP := "2"]
+pro_s_dat[,PROPDMGEXP:= as.character(PROPDMGEXP)][PROPDMGEXP == "m"|PROPDMGEXP == "M", PROPDMGEXP := "6"]
+pro_s_dat[,PROPDMGEXP:= as.character(PROPDMGEXP)][PROPDMGEXP == "B", PROPDMGEXP := "9"]
+pro_s_dat[,PROPDMGEXP:= as.character(PROPDMGEXP)][PROPDMGEXP == "K", PROPDMGEXP := "3"]
 
-Across the United States, which types of events have the greatest economic consequences?
-
-#Results
 
 
-at least one figure containing a plot
+pro_s_dat[,CROPDMGEXP:= as.character(CROPDMGEXP)][CROPDMGEXP == "-"|CROPDMGEXP == ""|CROPDMGEXP == "?"|CROPDMGEXP == "+", CROPDMGEXP := "0"]
+pro_s_dat[,CROPDMGEXP:= as.character(CROPDMGEXP)][CROPDMGEXP == "h"|CROPDMGEXP == "H", CROPDMGEXP := "2"]
+pro_s_dat[,CROPDMGEXP:= as.character(CROPDMGEXP)][CROPDMGEXP == "m"|CROPDMGEXP == "M", CROPDMGEXP := "6"]
+pro_s_dat[,CROPDMGEXP:= as.character(CROPDMGEXP)][CROPDMGEXP == "B", CROPDMGEXP := "9"]
+pro_s_dat[,CROPDMGEXP:= as.character(CROPDMGEXP)][CROPDMGEXP == "K"|CROPDMGEXP == "k", CROPDMGEXP := "3"]
 
-no more than three figures
+```
 
-Publishing Your Analysis
 
-For this assignment you will need to publish your analysis on RPubs.com. If you do not already have an account, then you will have to create a new account. After you have completed writing your analysis in RStudio, you can publish it to RPubs by doing the following:
+The property and crop costs are multiplied with the above generated columns to make new columns `CROP` and `PROP`. These are then added together to get the total damage column (` TOTDMG`). Similarly the total damage to the population is recorded in the `TOTPOP` column.
+```{r,cache=TRUE}
+s_dat=cbind(pro_s_dat[,1:3,with=F],data.frame(PROP=pro_s_dat$PROPDMG*10^as.numeric(pro_s_dat$PROPDMGEXP)),
+            data.frame(CROP=(pro_s_dat$CROPDMG*10^as.numeric(pro_s_dat$CROPDMGEXP))))
+s_dat=cbind(s_dat,data.frame(TOTDMG=s_dat$PROP+s_dat$CROP),data.frame(TOTPOP=s_dat$FATALITIES+s_dat$INJURIES))
+                                              
+```
 
-In RStudio, make sure your R Markdown document (.Rmd) document is loaded in the editor
 
-Click the Knit HTML button in the doc toolbar to preview your document.
+In order to understand which of the weather events cause the most damage it is necessary to sum the damage and to sort the results in descending order. This is done below:  
 
-In the preview window, click the Publish button.
 
-Once your document is published to RPubs, you should get a unique URL to that document. Make a note of this URL as you will need it to submit your assignment.
+Population damage data calculation.  
+```{r HealthDat,cache=TRUE}
+f_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("FATALITIES")]
+f_dat=f_dat[order(-rank(FATALITIES))]
+i_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("INJURIES")]
+i_dat=i_dat[order(-rank(INJURIES))]
+h_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("TOTPOP")]
+h_dat=h_dat[order(-rank(TOTPOP))]
+```
+Property damage data calculation:  
+```{r EcoDat,cache=TRUE}
+p_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("PROP")]
+p_dat=p_dat[order(-rank(PROP))]
+c_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("CROP")]
+c_dat=c_dat[order(-rank(CROP))]
+e_dat=s_dat[,lapply(.SD,sum),by=EVTYPE,.SDcols=c("TOTDMG")]
+e_dat=e_dat[order(-rank(TOTDMG))]
+```
+  
 
-NOTE: If you are having trouble connecting with RPubs due to proxy-related or other issues, you can upload your final analysis document file as a PDF to Coursera instead.
+
+#Results  
+
+##Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?  
+
+```{r HealthPlot,cache=TRUE}
+p1=ggplot(h_dat[1:5,],aes(x=reorder(EVTYPE,-TOTPOP),y=TOTPOP,fill=reorder(EVTYPE,-TOTPOP)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Total Population Damage")+ theme(legend.position="none")
+p2=ggplot(f_dat[1:5,],aes(x=reorder(EVTYPE,-FATALITIES),y=FATALITIES,fill=reorder(EVTYPE,-FATALITIES)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Fatalities")+ theme(legend.position="none")
+p3=ggplot(i_dat[1:5,],aes(x=reorder(EVTYPE,-INJURIES),y=INJURIES,fill=reorder(EVTYPE,-INJURIES)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Injuries")+ theme(legend.position="none")
+grid.arrange(p3,p2,p1)
+```
+
+  
+The graph above shows that Tornadoes cause the most Fatalities and injuries. It is also notable that Excessive Heat causes a large amount of deaths as well was injuries.  
+
+##Across the United States, which types of events have the greatest economic consequences?  
+
+```{r EcoPlot,cache=TRUE}
+p4=ggplot(e_dat[1:5,],aes(x=reorder(EVTYPE,-TOTDMG),y=TOTDMG,fill=reorder(EVTYPE,-TOTDMG)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Total Economic Damage $")+ theme(legend.position="none")
+p5=ggplot(c_dat[1:5,],aes(x=reorder(EVTYPE,-CROP),y=CROP,fill=reorder(EVTYPE,-CROP)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Crop Damage $")+ theme(legend.position="none")
+p6=ggplot(p_dat[1:5,],aes(x=reorder(EVTYPE,-PROP),y=PROP,fill=reorder(EVTYPE,-PROP)))+geom_bar(stat="identity")+xlab("Event Type")+ylab("Property Damage $")+ theme(legend.position="none")
+grid.arrange(p6,p5,p4)
+```
+  
+The most property damage is caused by floods while crops are severely affected by droughts and second most by floods. In terms of economic costs however floods cost the most followed by Hurricanes and Tornadoes. 

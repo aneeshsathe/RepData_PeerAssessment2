@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+bundleId:
+        https://api.rpubs.com/api/v1/document/85738/c1d0011e641b4275a8723c4ca55fb0dc
+url: http://rpubs.com/aneeshsathe/85738
+when: 1434185101.63899
